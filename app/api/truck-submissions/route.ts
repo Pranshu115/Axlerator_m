@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { safePrismaQuery } from '@/lib/prisma'
+import { safeSupabaseQuery } from '@/lib/supabase'
 import { truckSubmissionSchema, paginationSchema } from '@/lib/validation'
 import { validateRequest, formatValidationError, createErrorResponse, createSuccessResponse } from '@/lib/api-helpers'
 
@@ -17,15 +17,41 @@ export async function POST(request: Request) {
       )
     }
 
-    const submission = await safePrismaQuery(
-      async (prisma) => {
-        return await prisma.truckSubmission.create({
-          data: {
-            ...validation.data,
-            status: 'pending',
-            certified: false,
-          }
-        })
+    const submission = await safeSupabaseQuery(
+      async (supabase) => {
+        const submissionData = {
+          seller_name: validation.data.sellerName,
+          seller_email: validation.data.sellerEmail,
+          seller_phone: validation.data.sellerPhone,
+          manufacturer: validation.data.manufacturer,
+          model: validation.data.model,
+          year: validation.data.year,
+          registration_number: validation.data.registrationNumber ?? null,
+          kilometers: validation.data.kilometers,
+          fuel_type: validation.data.fuelType,
+          transmission: validation.data.transmission,
+          horsepower: validation.data.horsepower ?? null,
+          engine_capacity: validation.data.engineCapacity ?? null,
+          condition: validation.data.condition,
+          owner_number: validation.data.ownerNumber,
+          asking_price: validation.data.askingPrice,
+          negotiable: validation.data.negotiable ?? true,
+          location: validation.data.location,
+          state: validation.data.state,
+          city: validation.data.city,
+          features: validation.data.features ?? null,
+          description: validation.data.description ?? null,
+          images: validation.data.images,
+          status: 'pending',
+          certified: false,
+        }
+        const { data, error } = await supabase
+          .from('truck_submissions')
+          .insert(submissionData)
+          .select()
+          .single()
+        if (error) throw error
+        return data
       },
       null
     )
@@ -75,26 +101,28 @@ export async function GET(request: Request) {
     const limit = pagination.success ? pagination.data.limit : 20
     const skip = (page - 1) * limit
 
-    const result = await safePrismaQuery(
-      async (prisma) => {
-        const [submissions, total] = await Promise.all([
-          prisma.truckSubmission.findMany({
-            where: {
-              status: status as 'pending' | 'approved' | 'rejected'
-            },
-            orderBy: {
-              submittedAt: 'desc'
-            },
-            skip,
-            take: limit,
-          }),
-          prisma.truckSubmission.count({
-            where: {
-              status: status as 'pending' | 'approved' | 'rejected'
-            }
-          })
-        ])
-        return { submissions, total, page, limit, totalPages: Math.ceil(total / limit) }
+    const result = await safeSupabaseQuery(
+      async (supabase) => {
+        // Get total count
+        const { count } = await supabase
+          .from('truck_submissions')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', status)
+
+        // Get paginated submissions
+        const { data: submissions, error } = await supabase
+          .from('truck_submissions')
+          .select('*')
+          .eq('status', status)
+          .order('submitted_at', { ascending: false })
+          .range(skip, skip + limit - 1)
+
+        if (error) {
+          throw error
+        }
+
+        const total = count || 0
+        return { submissions: submissions || [], total, page, limit, totalPages: Math.ceil(total / limit) }
       },
       { submissions: [], total: 0, page: 1, limit: 20, totalPages: 0 }
     )

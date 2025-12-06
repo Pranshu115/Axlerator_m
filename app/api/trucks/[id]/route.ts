@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { safePrismaQuery } from '@/lib/prisma'
+import { safeSupabaseQuery } from '@/lib/supabase'
 import { seedTrucks } from '@/lib/seed-data'
 
 type TruckWithNumberPrice = {
@@ -36,22 +36,37 @@ export async function GET(
       )
     }
 
-    const truck = await safePrismaQuery<TruckWithNumberPrice | null>(
-      async (prisma) => {
-        const result = await prisma.truck.findUnique({
-          where: {
-            id: truckId,
-          },
-        })
-        // Convert Decimal to number for JSON serialization
-        if (result) {
-          return {
-            ...result,
-            price: Number(result.price),
-            subtitle: result.subtitle ?? null,
-          }
+    const truck = await safeSupabaseQuery<TruckWithNumberPrice | null>(
+      async (supabase) => {
+        const { data: result, error } = await supabase
+          .from('trucks')
+          .select('*')
+          .eq('id', truckId)
+          .single()
+
+        if (error || !result) {
+          return null
         }
-        return null
+
+        // Convert Supabase format to API format
+        return {
+          id: result.id,
+          name: result.name,
+          manufacturer: result.manufacturer,
+          model: result.model,
+          year: result.year,
+          kilometers: result.kilometers,
+          horsepower: result.horsepower,
+          price: Number(result.price),
+          imageUrl: result.image_url,
+          subtitle: result.subtitle ?? null,
+          certified: result.certified,
+          state: result.state ?? null,
+          location: result.location ?? null,
+          city: result.city ?? null,
+          createdAt: new Date(result.created_at),
+          updatedAt: new Date(result.updated_at),
+        }
       },
       // Fallback to seed data when database is unavailable
       (() => {

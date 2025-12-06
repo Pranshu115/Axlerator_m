@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { safePrismaQuery } from '@/lib/prisma'
+import { safeSupabaseQuery } from '@/lib/supabase'
 import { otpRequestSchema } from '@/lib/validation'
 import { validateRequest, formatValidationError, createErrorResponse, createSuccessResponse } from '@/lib/api-helpers'
 import { generateOTP, hashOTP, getOTPExpiry, getOTPLength, getOTPMaxAttempts } from '@/lib/otp'
@@ -22,21 +22,20 @@ export async function POST(request: Request) {
     const { phone, purpose } = validation.data
 
     // Check for existing unverified OTP for this phone and purpose
-    const existingOTP = await safePrismaQuery(
-      async (prisma) => {
-        return await prisma.otpVerification.findFirst({
-          where: {
-            phone,
-            purpose,
-            verified: false,
-            expiresAt: {
-              gt: new Date()
-            }
-          },
-          orderBy: {
-            createdAt: 'desc'
-          }
-        })
+    const existingOTP = await safeSupabaseQuery(
+      async (supabase) => {
+        const { data, error } = await supabase
+          .from('otp_verifications')
+          .select('*')
+          .eq('phone', phone)
+          .eq('purpose', purpose)
+          .eq('verified', false)
+          .gt('expires_at', new Date().toISOString())
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+        if (error && error.code !== 'PGRST116') throw error // PGRST116 = no rows returned
+        return data
       },
       null
     )
@@ -45,7 +44,8 @@ export async function POST(request: Request) {
     // Allow resend after 1 minute to prevent spam
     if (existingOTP) {
       const oneMinuteAgo = new Date(Date.now() - 60 * 1000)
-      if (existingOTP.createdAt > oneMinuteAgo) {
+      const createdAt = new Date(existingOTP.created_at)
+      if (createdAt > oneMinuteAgo) {
         return createErrorResponse(
           'Please wait before requesting a new OTP. Check your SMS for the previous code.',
           429
@@ -60,31 +60,35 @@ export async function POST(request: Request) {
     const expiresAt = getOTPExpiry()
 
     // Delete old unverified OTPs for this phone and purpose
-    await safePrismaQuery(
-      async (prisma) => {
-        await prisma.otpVerification.deleteMany({
-          where: {
-            phone,
-            purpose,
-            verified: false
-          }
-        })
+    await safeSupabaseQuery(
+      async (supabase) => {
+        await supabase
+          .from('otp_verifications')
+          .delete()
+          .eq('phone', phone)
+          .eq('purpose', purpose)
+          .eq('verified', false)
       },
       null
     )
 
     // Save OTP to database
-    const otpRecord = await safePrismaQuery(
-      async (prisma) => {
-        return await prisma.otpVerification.create({
-          data: {
-            phone,
-            otp: otpHash,
-            purpose,
-            expiresAt,
-            maxAttempts: getOTPMaxAttempts()
-          }
-        })
+    const otpRecord = await safeSupabaseQuery(
+      async (supabase) => {
+        const otpData = {
+          phone,
+          otp: otpHash,
+          purpose,
+          expires_at: expiresAt.toISOString(),
+          max_attempts: getOTPMaxAttempts()
+        }
+        const { data, error } = await supabase
+          .from('otp_verifications')
+          .insert(otpData)
+          .select()
+          .single()
+        if (error) throw error
+        return data
       },
       null
     )
@@ -107,11 +111,12 @@ export async function POST(request: Request) {
       // In production, if SMS fails, we should still return error
       if (process.env.NODE_ENV === 'production' && !smsResult.success) {
         // Delete the OTP record if SMS failed
-        await safePrismaQuery(
-          async (prisma) => {
-            await prisma.otpVerification.delete({
-              where: { id: otpRecord.id }
-            })
+        await safeSupabaseQuery(
+          async (supabase) => {
+            await supabase
+              .from('otp_verifications')
+              .delete()
+              .eq('id', otpRecord.id)
           },
           null
         )

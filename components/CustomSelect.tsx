@@ -153,7 +153,6 @@ export default function CustomSelect({
           onClick={handleToggle}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
-          aria-required={required}
         >
           <span className="custom-select-value">{selectedLabel}</span>
           <svg

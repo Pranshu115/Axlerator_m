@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 
 interface TruckModalProps {
@@ -18,12 +18,7 @@ export default function TruckModal({ truck, isOpen, onClose }: TruckModalProps) 
   const [totalInterest, setTotalInterest] = useState(0)
   const interestRate = 10.5 // Fixed interest rate
 
-  // Auto-calculate EMI whenever loan amount, down payment, or tenure changes
-  useEffect(() => {
-    calculateEMI()
-  }, [loanAmount, downPayment, tenure])
-
-  const calculateEMI = () => {
+  const calculateEMI = useCallback(() => {
     const principal = loanAmount - downPayment
     const ratePerMonth = interestRate / 12 / 100
     const numberOfMonths = tenure
@@ -44,7 +39,12 @@ export default function TruckModal({ truck, isOpen, onClose }: TruckModalProps) 
       setEmi(emiValue)
       setTotalInterest((emiValue * numberOfMonths) - principal)
     }
-  }
+  }, [loanAmount, downPayment, tenure])
+
+  // Auto-calculate EMI whenever loan amount, down payment, or tenure changes
+  useEffect(() => {
+    calculateEMI()
+  }, [calculateEMI])
 
   if (!isOpen) return null
 

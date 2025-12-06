@@ -7,7 +7,8 @@
     "dev:simple": "next dev",
     "dev:watch": "node scripts/watch-files.js",
     "dev:verbose": "NODE_OPTIONS='--trace-warnings' next dev",
-    "build": "next build",
+    "postinstall": "prisma generate",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "seed": "node prisma/seed.js"
@@ -20,6 +21,7 @@
     "@prisma/client": "^6.19.0",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-slot": "^1.2.4",
+    "@supabase/supabase-js": "^2.86.2",
     "@tabler/icons-react": "^3.35.0",
     "@upstash/ratelimit": "^2.0.7",
     "@upstash/redis": "^1.35.7",

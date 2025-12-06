@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type React from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -135,40 +135,7 @@ export default function TruckDetailsPage() {
   const [interestAmount, setInterestAmount] = useState(0)
   const rateOfInterest = 10.5
 
-  useEffect(() => {
-    loadTruckData()
-    setIsVisible(true)
-  }, [params.id])
-
-  useEffect(() => {
-    if (truck) {
-      setFinanceAmount(parseFloat(truck.price))
-      loadSimilarTrucks()
-    }
-  }, [truck])
-
-  useEffect(() => {
-    computeEMI()
-  }, [financeAmount, initialPayment, loanPeriod])
-
-  const computeEMI = () => {
-    const principal = financeAmount - initialPayment
-    const monthlyRate = rateOfInterest / 12 / 100
-    const months = loanPeriod
-
-    if (principal <= 0) {
-      setMonthlyEMI(0)
-      setInterestAmount(0)
-      return
-    }
-
-    const emiCalc = (principal * monthlyRate * Math.pow(1 + monthlyRate, months)) /
-      (Math.pow(1 + monthlyRate, months) - 1)
-    setMonthlyEMI(emiCalc)
-    setInterestAmount((emiCalc * months) - principal)
-  }
-
-  const loadTruckData = async () => {
+  const loadTruckData = useCallback(async () => {
     try {
       const res = await fetch(`/api/trucks/${params.id}`)
       if (res.ok) {
@@ -192,9 +159,9 @@ export default function TruckDetailsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [params.id])
 
-  const loadSimilarTrucks = async () => {
+  const loadSimilarTrucks = useCallback(async () => {
     try {
       const res = await fetch(`/api/trucks/${params.id}/similar`)
       if (res.ok) {
@@ -205,7 +172,40 @@ export default function TruckDetailsPage() {
       console.error('Error loading similar trucks:', err)
       setSimilarTrucks([])
     }
-  }
+  }, [params.id])
+
+  const computeEMI = useCallback(() => {
+    const principal = financeAmount - initialPayment
+    const monthlyRate = rateOfInterest / 12 / 100
+    const months = loanPeriod
+
+    if (principal <= 0) {
+      setMonthlyEMI(0)
+      setInterestAmount(0)
+      return
+    }
+
+    const emiCalc = (principal * monthlyRate * Math.pow(1 + monthlyRate, months)) /
+      (Math.pow(1 + monthlyRate, months) - 1)
+    setMonthlyEMI(emiCalc)
+    setInterestAmount((emiCalc * months) - principal)
+  }, [financeAmount, initialPayment, loanPeriod])
+
+  useEffect(() => {
+    loadTruckData()
+    setIsVisible(true)
+  }, [loadTruckData])
+
+  useEffect(() => {
+    if (truck) {
+      setFinanceAmount(parseFloat(truck.price))
+      loadSimilarTrucks()
+    }
+  }, [truck, loadSimilarTrucks])
+
+  useEffect(() => {
+    computeEMI()
+  }, [computeEMI])
 
   const displayPrice = (price: string | number | undefined | null) => {
     if (price === undefined || price === null) return '₹0'

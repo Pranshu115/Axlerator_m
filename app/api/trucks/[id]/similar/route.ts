@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { safePrismaQuery } from '@/lib/prisma'
+import { safeSupabaseQuery } from '@/lib/supabase'
 import { seedTrucks } from '@/lib/seed-data'
 
 type TruckWithNumberPrice = {
@@ -37,20 +37,37 @@ export async function GET(
     }
 
     // First, get the current truck to find similar ones
-    const currentTruck = await safePrismaQuery<TruckWithNumberPrice | null>(
-      async (prisma) => {
-        const result = await prisma.truck.findUnique({
-          where: { id: truckId },
-        })
-        // Convert Decimal to number
-        if (result) {
-          return {
-            ...result,
-            price: Number(result.price),
-            subtitle: result.subtitle ?? null,
-          }
+    const currentTruck = await safeSupabaseQuery<TruckWithNumberPrice | null>(
+      async (supabase) => {
+        const { data: result, error } = await supabase
+          .from('trucks')
+          .select('*')
+          .eq('id', truckId)
+          .single()
+
+        if (error || !result) {
+          return null
         }
-        return null
+
+        // Convert Supabase format to API format
+        return {
+          id: result.id,
+          name: result.name,
+          manufacturer: result.manufacturer,
+          model: result.model,
+          year: result.year,
+          kilometers: result.kilometers,
+          horsepower: result.horsepower,
+          price: Number(result.price),
+          imageUrl: result.image_url,
+          subtitle: result.subtitle ?? null,
+          certified: result.certified,
+          state: result.state ?? null,
+          location: result.location ?? null,
+          city: result.city ?? null,
+          createdAt: new Date(result.created_at),
+          updatedAt: new Date(result.updated_at),
+        }
       },
       // Fallback to seed data
       (() => {
@@ -77,36 +94,55 @@ export async function GET(
     const priceMin = Number(currentTruck.price) * 0.7
     const priceMax = Number(currentTruck.price) * 1.3
 
-    const similarTrucks = await safePrismaQuery<TruckWithNumberPrice[]>(
-      async (prisma) => {
-        const results = await prisma.truck.findMany({
-          where: {
-            AND: [
-              { id: { not: truckId } },
-              {
-                OR: [
-                  { manufacturer: currentTruck.manufacturer },
-                  {
-                    price: {
-                      gte: priceMin,
-                      lte: priceMax,
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          take: 4,
-          orderBy: [
-            { manufacturer: 'asc' },
-            { createdAt: 'desc' }
-          ]
-        })
-        // Convert Decimal to number for all trucks
-        return results.map(truck => ({
-          ...truck,
+    const similarTrucks = await safeSupabaseQuery<TruckWithNumberPrice[]>(
+      async (supabase) => {
+        // Get trucks by manufacturer first
+        const { data: byManufacturer, error: error1 } = await supabase
+          .from('trucks')
+          .select('*')
+          .eq('manufacturer', currentTruck.manufacturer)
+          .neq('id', truckId)
+          .eq('certified', true)
+          .limit(4)
+
+        // Get trucks by price range
+        const { data: byPrice, error: error2 } = await supabase
+          .from('trucks')
+          .select('*')
+          .neq('id', truckId)
+          .eq('certified', true)
+          .gte('price', priceMin)
+          .lte('price', priceMax)
+          .limit(4)
+
+        if (error1 || error2) {
+          throw error1 || error2
+        }
+
+        // Combine and deduplicate results
+        const allResults = [...(byManufacturer || []), ...(byPrice || [])]
+        const uniqueResults = Array.from(
+          new Map(allResults.map(truck => [truck.id, truck])).values()
+        ).slice(0, 4)
+
+        // Convert Supabase format to API format
+        return uniqueResults.map(truck => ({
+          id: truck.id,
+          name: truck.name,
+          manufacturer: truck.manufacturer,
+          model: truck.model,
+          year: truck.year,
+          kilometers: truck.kilometers,
+          horsepower: truck.horsepower,
           price: Number(truck.price),
+          imageUrl: truck.image_url,
           subtitle: truck.subtitle ?? null,
+          certified: truck.certified,
+          state: truck.state ?? null,
+          location: truck.location ?? null,
+          city: truck.city ?? null,
+          createdAt: new Date(truck.created_at),
+          updatedAt: new Date(truck.updated_at),
         }))
       },
       // Fallback to seed data - find similar trucks

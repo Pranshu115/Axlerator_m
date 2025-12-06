@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { safePrismaQuery } from '@/lib/prisma'
+import { safeSupabaseQuery } from '@/lib/supabase'
 import { valuationSchema } from '@/lib/validation'
 import { validateRequest, formatValidationError, createErrorResponse, createSuccessResponse } from '@/lib/api-helpers'
 
@@ -17,11 +17,26 @@ export async function POST(request: Request) {
       )
     }
 
-    const valuation = await safePrismaQuery(
-      async (prisma) => {
-        return await prisma.valuationRequest.create({
-          data: validation.data
-        })
+    const valuation = await safeSupabaseQuery(
+      async (supabase) => {
+        const valuationData = {
+          name: validation.data.name,
+          email: validation.data.email,
+          phone: validation.data.phone,
+          truck_manufacturer: validation.data.truckManufacturer,
+          truck_model: validation.data.truckModel,
+          year: validation.data.year,
+          kilometers: validation.data.kilometers,
+          condition: validation.data.condition,
+          additional_info: validation.data.additionalInfo ?? null,
+        }
+        const { data, error } = await supabase
+          .from('valuation_requests')
+          .insert(valuationData)
+          .select()
+          .single()
+        if (error) throw error
+        return data
       },
       null
     )

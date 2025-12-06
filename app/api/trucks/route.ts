@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { safePrismaQuery } from '@/lib/prisma'
+import { safeSupabaseQuery, type Truck } from '@/lib/supabase'
 import { truckCreateSchema, paginationSchema } from '@/lib/validation'
 import { validateRequest, formatValidationError, createErrorResponse, createSuccessResponse } from '@/lib/api-helpers'
 import { seedTrucks } from '@/lib/seed-data'
@@ -37,37 +37,53 @@ export async function GET(request: Request) {
     const limit = pagination.success ? pagination.data.limit : 20
     const skip = (page - 1) * limit
 
-    const result = await safePrismaQuery<{
+    const result = await safeSupabaseQuery<{
       trucks: TruckWithNumberPrice[]
       total: number
       page: number
       limit: number
       totalPages: number
     }>(
-      async (prisma) => {
-        const [trucks, total] = await Promise.all([
-          prisma.truck.findMany({
-            where: {
-              certified: true
-            },
-            orderBy: {
-              createdAt: 'desc'
-            },
-            skip,
-            take: limit,
-          }),
-          prisma.truck.count({
-            where: {
-              certified: true
-            }
-          })
-        ])
-        // Convert Decimal to number for all trucks
-        const trucksWithNumberPrice = trucks.map(truck => ({
-          ...truck,
+      async (supabase) => {
+        // Get total count
+        const { count } = await supabase
+          .from('trucks')
+          .select('*', { count: 'exact', head: true })
+          .eq('certified', true)
+
+        // Get paginated trucks
+        const { data: trucks, error } = await supabase
+          .from('trucks')
+          .select('*')
+          .eq('certified', true)
+          .order('created_at', { ascending: false })
+          .range(skip, skip + limit - 1)
+
+        if (error) {
+          throw error
+        }
+
+        // Convert Supabase format to API format
+        const trucksWithNumberPrice: TruckWithNumberPrice[] = (trucks || []).map((truck: Truck) => ({
+          id: truck.id,
+          name: truck.name,
+          manufacturer: truck.manufacturer,
+          model: truck.model,
+          year: truck.year,
+          kilometers: truck.kilometers,
+          horsepower: truck.horsepower,
           price: Number(truck.price),
+          imageUrl: truck.image_url,
           subtitle: truck.subtitle ?? null,
+          certified: truck.certified,
+          state: truck.state ?? null,
+          location: truck.location ?? null,
+          city: truck.city ?? null,
+          createdAt: new Date(truck.created_at),
+          updatedAt: new Date(truck.updated_at),
         }))
+
+        const total = count || 0
         return { trucks: trucksWithNumberPrice, total, page, limit, totalPages: Math.ceil(total / limit) }
       },
       // Fallback to seed data when database is unavailable
@@ -117,16 +133,57 @@ export async function POST(request: Request) {
     // TODO: Add authentication check here
     // For now, we'll allow it but in production, add proper auth
 
-    const truck = await safePrismaQuery<TruckWithNumberPrice | null>(
-      async (prisma) => {
-        const result = await prisma.truck.create({
-          data: validation.data
-        })
-        // Convert Decimal to number
+    const truck = await safeSupabaseQuery<TruckWithNumberPrice | null>(
+      async (supabase) => {
+        // Convert API format to Supabase format
+        const truckData = {
+          name: validation.data.name,
+          manufacturer: validation.data.manufacturer,
+          model: validation.data.model,
+          year: validation.data.year,
+          kilometers: validation.data.kilometers,
+          horsepower: validation.data.horsepower,
+          price: validation.data.price,
+          image_url: validation.data.imageUrl,
+          subtitle: validation.data.subtitle ?? null,
+          certified: validation.data.certified ?? true,
+          state: null,
+          location: null,
+          city: null,
+        }
+
+        const { data: result, error } = await supabase
+          .from('trucks')
+          .insert(truckData)
+          .select()
+          .single()
+
+        if (error) {
+          throw error
+        }
+
+        if (!result) {
+          return null
+        }
+
+        // Convert Supabase format to API format
         return {
-          ...result,
+          id: result.id,
+          name: result.name,
+          manufacturer: result.manufacturer,
+          model: result.model,
+          year: result.year,
+          kilometers: result.kilometers,
+          horsepower: result.horsepower,
           price: Number(result.price),
+          imageUrl: result.image_url,
           subtitle: result.subtitle ?? null,
+          certified: result.certified,
+          state: result.state ?? null,
+          location: result.location ?? null,
+          city: result.city ?? null,
+          createdAt: new Date(result.created_at),
+          updatedAt: new Date(result.updated_at),
         }
       },
       null

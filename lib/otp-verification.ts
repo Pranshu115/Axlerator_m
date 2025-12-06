@@ -1,4 +1,4 @@
-import { safePrismaQuery } from './prisma'
+import { safeSupabaseQuery } from './supabase'
 
 /**
  * Verify OTP token for a phone number and purpose
@@ -10,22 +10,21 @@ export async function verifyOTPToken(
   token: string
 ): Promise<{ valid: boolean; message?: string }> {
   try {
-    const verification = await safePrismaQuery(
-      async (prisma) => {
-        return await prisma.otpVerification.findFirst({
-          where: {
-            phone,
-            purpose,
-            verified: true,
-            verifiedAt: {
-              // Verified within last 15 minutes
-              gte: new Date(Date.now() - 15 * 60 * 1000)
-            }
-          },
-          orderBy: {
-            verifiedAt: 'desc'
-          }
-        })
+    const verification = await safeSupabaseQuery(
+      async (supabase) => {
+        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString()
+        const { data, error } = await supabase
+          .from('otp_verifications')
+          .select('*')
+          .eq('phone', phone)
+          .eq('purpose', purpose)
+          .eq('verified', true)
+          .gte('verified_at', fifteenMinutesAgo)
+          .order('verified_at', { ascending: false })
+          .limit(1)
+          .single()
+        if (error && error.code !== 'PGRST116') throw error
+        return data
       },
       null
     )
@@ -57,19 +56,17 @@ export async function verifyOTPToken(
  * Mark OTP as used after successful inquiry/booking
  */
 export async function markOTPAsUsed(phone: string, purpose: string): Promise<void> {
-  await safePrismaQuery(
-    async (prisma) => {
+  await safeSupabaseQuery(
+    async (supabase) => {
       // Delete verified OTPs older than 15 minutes to clean up
-      await prisma.otpVerification.deleteMany({
-        where: {
-          phone,
-          purpose,
-          verified: true,
-          verifiedAt: {
-            lt: new Date(Date.now() - 15 * 60 * 1000)
-          }
-        }
-      })
+      const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString()
+      await supabase
+        .from('otp_verifications')
+        .delete()
+        .eq('phone', phone)
+        .eq('purpose', purpose)
+        .eq('verified', true)
+        .lt('verified_at', fifteenMinutesAgo)
     },
     null
   )

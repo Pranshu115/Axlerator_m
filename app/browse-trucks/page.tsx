@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import TruckCard from '@/components/TruckCard'
@@ -41,52 +41,7 @@ function BrowseTrucksContent() {
     location: ''
   })
 
-  useEffect(() => {
-    // Read location from URL query parameters
-    const locationParam = searchParams.get('location')
-    if (locationParam) {
-      setFilters(prev => ({ ...prev, location: locationParam }))
-    }
-    fetchTrucks()
-  }, [searchParams])
-
-  useEffect(() => {
-    applyFilters()
-  }, [filters, trucks])
-
-  const isAnyFilterApplied = () => {
-    const defaultFilters = {
-      priceMin: 50000,
-      priceMax: 7000000,
-      selectedBrands: [],
-      selectedYear: '',
-      selectedKmDriven: '',
-      selectedFuelTypes: [],
-      selectedColors: [],
-      selectedFeatures: [],
-      selectedOwner: '',
-      selectedAvailability: '',
-      transmission: '',
-      location: ''
-    }
-
-    return (
-      filters.priceMin !== defaultFilters.priceMin ||
-      filters.priceMax !== defaultFilters.priceMax ||
-      filters.selectedBrands.length > 0 ||
-      filters.selectedYear !== '' ||
-      filters.selectedKmDriven !== '' ||
-      filters.selectedFuelTypes.length > 0 ||
-      filters.selectedColors.length > 0 ||
-      filters.selectedFeatures.length > 0 ||
-      filters.selectedOwner !== '' ||
-      filters.selectedAvailability !== '' ||
-      filters.transmission !== '' ||
-      filters.location !== ''
-    )
-  }
-
-  const fetchTrucks = async () => {
+  const fetchTrucks = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -159,9 +114,9 @@ function BrowseTrucksContent() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     let filtered = [...trucks]
 
     console.log('=== APPLYING FILTERS ===')
@@ -265,7 +220,53 @@ function BrowseTrucksContent() {
     console.log('FINAL FILTERED TRUCKS:', filtered.length)
     console.log('======================')
     setFilteredTrucks(filtered)
+  }, [filters, trucks])
+
+  useEffect(() => {
+    // Read location from URL query parameters
+    const locationParam = searchParams.get('location')
+    if (locationParam) {
+      setFilters(prev => ({ ...prev, location: locationParam }))
+    }
+    fetchTrucks()
+  }, [searchParams, fetchTrucks])
+
+  useEffect(() => {
+    applyFilters()
+  }, [applyFilters])
+
+  const isAnyFilterApplied = () => {
+    const defaultFilters = {
+      priceMin: 50000,
+      priceMax: 7000000,
+      selectedBrands: [],
+      selectedYear: '',
+      selectedKmDriven: '',
+      selectedFuelTypes: [],
+      selectedColors: [],
+      selectedFeatures: [],
+      selectedOwner: '',
+      selectedAvailability: '',
+      transmission: '',
+      location: ''
+    }
+
+    return (
+      filters.priceMin !== defaultFilters.priceMin ||
+      filters.priceMax !== defaultFilters.priceMax ||
+      filters.selectedBrands.length > 0 ||
+      filters.selectedYear !== '' ||
+      filters.selectedKmDriven !== '' ||
+      filters.selectedFuelTypes.length > 0 ||
+      filters.selectedColors.length > 0 ||
+      filters.selectedFeatures.length > 0 ||
+      filters.selectedOwner !== '' ||
+      filters.selectedAvailability !== '' ||
+      filters.transmission !== '' ||
+      filters.location !== ''
+    )
   }
+
 
   const handleFilterChange = (newFilters: any) => {
     setFilters(newFilters)

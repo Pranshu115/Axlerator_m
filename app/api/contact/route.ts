@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { safePrismaQuery } from '@/lib/prisma'
+import { safeSupabaseQuery } from '@/lib/supabase'
 import { contactSchema } from '@/lib/validation'
 import { validateRequest, formatValidationError, createErrorResponse, createSuccessResponse } from '@/lib/api-helpers'
 
@@ -24,16 +24,21 @@ export async function POST(request: Request) {
 
     const { name, email, phone, subject, message } = validation.data
     
-    const submission = await safePrismaQuery(
-      async (prisma) => {
-        return await prisma.contactSubmission.create({
-          data: {
-            name,
-            email,
-            phone: phone || null,
-            message: `${subject ? `Subject: ${subject}\n\n` : ''}${message}`,
-          }
-        })
+    const submission = await safeSupabaseQuery(
+      async (supabase) => {
+        const submissionData = {
+          name,
+          email,
+          phone: phone || null,
+          message: `${subject ? `Subject: ${subject}\n\n` : ''}${message}`,
+        }
+        const { data, error } = await supabase
+          .from('contact_submissions')
+          .insert(submissionData)
+          .select()
+          .single()
+        if (error) throw error
+        return data
       },
       null // Return null if database unavailable
     )

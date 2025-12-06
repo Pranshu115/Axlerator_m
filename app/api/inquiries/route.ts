@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { safePrismaQuery } from '@/lib/prisma'
+import { safeSupabaseQuery } from '@/lib/supabase'
 import { inquirySchema, inquiryWithOTPSchema } from '@/lib/validation'
 import { validateRequest, formatValidationError, createErrorResponse, createSuccessResponse } from '@/lib/api-helpers'
 import { verifyOTPToken, markOTPAsUsed } from '@/lib/otp-verification'
@@ -35,13 +35,14 @@ export async function POST(request: Request) {
       }
 
       // Verify truck exists
-      const truckExists = await safePrismaQuery(
-        async (prisma) => {
-          const truck = await prisma.truck.findUnique({
-            where: { id: validation.data.truckId },
-            select: { id: true }
-          })
-          return truck !== null
+      const truckExists = await safeSupabaseQuery(
+        async (supabase) => {
+          const { data, error } = await supabase
+            .from('trucks')
+            .select('id')
+            .eq('id', validation.data.truckId)
+            .single()
+          return !error && data !== null
         },
         false
       )
@@ -55,11 +56,23 @@ export async function POST(request: Request) {
 
       // Create inquiry (without otpToken field)
       const { otpToken: _, ...inquiryData } = validation.data
-      const inquiry = await safePrismaQuery(
-        async (prisma) => {
-          return await prisma.truckInquiry.create({
-            data: inquiryData
-          })
+      const inquiry = await safeSupabaseQuery(
+        async (supabase) => {
+          const inquiryRecord = {
+            truck_id: inquiryData.truckId,
+            truck_name: inquiryData.truckName,
+            name: inquiryData.name,
+            email: inquiryData.email,
+            phone: inquiryData.phone,
+            message: inquiryData.message ?? null,
+          }
+          const { data, error } = await supabase
+            .from('truck_inquiries')
+            .insert(inquiryRecord)
+            .select()
+            .single()
+          if (error) throw error
+          return data
         },
         null
       )
@@ -92,13 +105,14 @@ export async function POST(request: Request) {
     }
 
     // Verify truck exists
-    const truckExists = await safePrismaQuery(
-      async (prisma) => {
-        const truck = await prisma.truck.findUnique({
-          where: { id: validation.data.truckId },
-          select: { id: true }
-        })
-        return truck !== null
+    const truckExists = await safeSupabaseQuery(
+      async (supabase) => {
+        const { data, error } = await supabase
+          .from('trucks')
+          .select('id')
+          .eq('id', validation.data.truckId)
+          .single()
+        return !error && data !== null
       },
       false
     )
@@ -110,11 +124,23 @@ export async function POST(request: Request) {
       )
     }
 
-    const inquiry = await safePrismaQuery(
-      async (prisma) => {
-        return await prisma.truckInquiry.create({
-          data: validation.data
-        })
+    const inquiry = await safeSupabaseQuery(
+      async (supabase) => {
+        const inquiryRecord = {
+          truck_id: validation.data.truckId,
+          truck_name: validation.data.truckName,
+          name: validation.data.name,
+          email: validation.data.email,
+          phone: validation.data.phone,
+          message: validation.data.message ?? null,
+        }
+        const { data, error } = await supabase
+          .from('truck_inquiries')
+          .insert(inquiryRecord)
+          .select()
+          .single()
+        if (error) throw error
+        return data
       },
       null
     )

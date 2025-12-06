@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 interface BrowseFiltersProps {
   onFilterChange: (filters: any) => void
@@ -44,7 +44,7 @@ export default function BrowseFilters({ onFilterChange, totalCars }: BrowseFilte
       selectedAvailability
     })
   }, [priceMin, priceMax, selectedBrands, selectedYear, selectedKmDriven, 
-      selectedFuelTypes, selectedColors, selectedFeatures, selectedOwner, selectedAvailability])
+      selectedFuelTypes, selectedColors, selectedFeatures, selectedOwner, selectedAvailability, onFilterChange])
 
   const handleReset = () => {
     setPriceMin(50000)
