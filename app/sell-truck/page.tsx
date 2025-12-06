@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import Stepper, { Step, StepperRef } from '@/components/Stepper'
@@ -2151,10 +2152,13 @@ export default function SellTruckPage() {
                         {photoPreviews.map((photo, index) => (
                           <div className="image-preview-card" key={`photo-${index}-${photo.file.name}-${photo.preview}`}>
                             <div className="image-preview-item">
-                              <img 
+                              <Image 
                                 src={photo.preview} 
                                 alt={`Truck photo ${index + 1}`}
                                 className="preview-image"
+                                width={200}
+                                height={200}
+                                unoptimized
                               />
                               <div className="image-number-badge">{index + 1}</div>
                               <button
