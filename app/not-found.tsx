@@ -1,16 +1,26 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
+import dynamicImport from 'next/dynamic'
+
+// Dynamically import Navbar and Footer to avoid SSR issues during build
+const Navbar = dynamicImport(() => import('@/components/Navbar'), { ssr: false })
+const Footer = dynamicImport(() => import('@/components/Footer'), { ssr: false })
 
 // Prevent static generation - this page must be rendered at request time
 export const dynamic = 'force-dynamic'
 
 export default function NotFound() {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   return (
     <>
-      <Navbar />
+      {mounted && <Navbar />}
       <div style={{
         minHeight: '60vh',
         display: 'flex',
@@ -56,7 +66,7 @@ export default function NotFound() {
           Go Back Home
         </Link>
       </div>
-      <Footer />
+      {mounted && <Footer />}
     </>
   )
 }
