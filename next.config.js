@@ -110,6 +110,7 @@ const nextConfig = {
   // Set the workspace root to silence the lockfile warning
   outputFileTracingRoot: path.join(__dirname),
   
+  
   images: {
     remotePatterns: [
       {

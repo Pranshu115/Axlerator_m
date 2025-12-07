@@ -1,12 +1,14 @@
-'use client'
-
 import Link from 'next/link'
+import { headers } from 'next/headers'
 
-// Prevent static generation - this page must be rendered at request time
+// Force dynamic rendering by using headers()
 export const dynamic = 'force-dynamic'
 export const dynamicParams = true
 
-export default function NotFound() {
+export default async function NotFound() {
+  // Use headers() to force dynamic rendering - prevents static generation
+  headers()
+  
   return (
     <div style={{
       minHeight: '100vh',

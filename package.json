@@ -7,8 +7,7 @@
     "dev:simple": "next dev",
     "dev:watch": "node scripts/watch-files.js",
     "dev:verbose": "NODE_OPTIONS='--trace-warnings' next dev",
-    "postinstall": "prisma generate",
-    "build": "prisma generate && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "seed": "node prisma/seed.js"

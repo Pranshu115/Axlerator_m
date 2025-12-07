@@ -3,7 +3,8 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 
-// Prevent static generation - this page must be rendered at request time
+// Error boundaries must be client components
+// This will be rendered dynamically at runtime
 export const dynamic = 'force-dynamic'
 export const dynamicParams = true
 
