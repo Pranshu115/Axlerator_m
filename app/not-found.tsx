@@ -4,6 +4,9 @@ import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 
+// Prevent static generation - this page must be rendered at request time
+export const dynamic = 'force-dynamic'
+
 export default function NotFound() {
   return (
     <>
