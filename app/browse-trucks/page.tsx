@@ -51,18 +51,34 @@ function BrowseTrucksContent() {
       setLoading(true)
       
       // Fetch all certified trucks from database (increase limit to get all trucks)
-      const certifiedResponse = await fetch('/api/trucks?limit=100')
-      const certifiedResult = await certifiedResponse.json()
-      
-      // Handle paginated response format
-      const certifiedTrucks = certifiedResult.trucks || (Array.isArray(certifiedResult) ? certifiedResult : [])
+      let certifiedTrucks: any[] = []
+      try {
+        const certifiedResponse = await fetch('/api/trucks?limit=100')
+        if (!certifiedResponse.ok) {
+          console.error('Failed to fetch trucks:', certifiedResponse.status, certifiedResponse.statusText)
+        } else {
+          const certifiedResult = await certifiedResponse.json()
+          // Handle paginated response format
+          certifiedTrucks = certifiedResult.trucks || (Array.isArray(certifiedResult) ? certifiedResult : [])
+        }
+      } catch (error) {
+        console.error('Error fetching certified trucks:', error)
+      }
       
       // Fetch approved truck submissions
-      const submissionsResponse = await fetch('/api/truck-submissions?status=approved')
-      const submissionsResult = await submissionsResponse.json()
-      
-      // Handle paginated response format
-      const submissions = submissionsResult.submissions || (Array.isArray(submissionsResult) ? submissionsResult : [])
+      let submissions: any[] = []
+      try {
+        const submissionsResponse = await fetch('/api/truck-submissions?status=approved')
+        if (!submissionsResponse.ok) {
+          console.error('Failed to fetch submissions:', submissionsResponse.status, submissionsResponse.statusText)
+        } else {
+          const submissionsResult = await submissionsResponse.json()
+          // Handle paginated response format
+          submissions = submissionsResult.submissions || (Array.isArray(submissionsResult) ? submissionsResult : [])
+        }
+      } catch (error) {
+        console.error('Error fetching truck submissions:', error)
+      }
       
       // Transform certified trucks
       const formattedCertified: Truck[] = certifiedTrucks.map((truck: any) => {
@@ -146,7 +162,7 @@ function BrowseTrucksContent() {
       setTrucks(allTrucks)
       setFilteredTrucks(allTrucks)
     } catch (error) {
-      console.error('Error fetching trucks:', error)
+      console.error('Error in fetchTrucks:', error)
       // Set empty arrays on error instead of dummy data
       setTrucks([])
       setFilteredTrucks([])
