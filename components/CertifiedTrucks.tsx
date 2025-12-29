@@ -23,7 +23,12 @@ interface TruckCardProps {
 
 const TruckCard = ({ badge, name, subtitle, specs, price, image, gradient, onInquire }: TruckCardProps) => {
   return (
-    <div className="truck-card-apple">
+    <div
+      className="truck-card-apple"
+      onClick={onInquire}
+      role="button"
+      tabIndex={0}
+    >
       <div className="truck-card-image-apple">
         {image && (
           <Image
@@ -62,7 +67,15 @@ const TruckCard = ({ badge, name, subtitle, specs, price, image, gradient, onInq
         </div>
         <div className="truck-card-footer-apple">
           <div className="truck-card-price-apple">{price}</div>
-          <button className="truck-card-cta-apple" onClick={onInquire}>View Details →</button>
+          <button
+            className="truck-card-cta-apple"
+            onClick={(e) => {
+              e.stopPropagation()
+              onInquire()
+            }}
+          >
+            View Details →
+          </button>
         </div>
       </div>
     </div>

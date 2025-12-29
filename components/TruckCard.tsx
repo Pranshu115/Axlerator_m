@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface Truck {
@@ -15,6 +15,7 @@ interface Truck {
   location: string
   image: string
   certified: boolean
+  images?: string[] // Support multiple images
 }
 
 interface TruckCardProps {
@@ -23,26 +24,103 @@ interface TruckCardProps {
 
 export default function TruckCard({ truck }: TruckCardProps) {
   const [isFavorite, setIsFavorite] = useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [touchStart, setTouchStart] = useState(0)
+  const [touchEnd, setTouchEnd] = useState(0)
+  const imageContainerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
+  // Spinny-style helpers
+  const priceNumber = (() => {
+    const num = parseInt(truck.price.replace(/[^0-9]/g, ''), 10)
+    return Number.isFinite(num) ? num : 0
+  })()
+
+  const emiValue = priceNumber > 0 ? Math.round(priceNumber / 60) : null
+
+  // Get all images for this truck
+  const images = truck.images && truck.images.length > 0 
+    ? truck.images 
+    : truck.image 
+      ? [truck.image] 
+      : []
+
   const handleViewDetails = () => {
-    // Navigate to the full truck details page in the same tab
     router.push(`/truck/${truck.id}`)
   }
 
+  // Handle touch swipe for image carousel
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+    
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > 50
+    const isRightSwipe = distance < -50
+
+    if (isLeftSwipe && currentImageIndex < images.length - 1) {
+      setCurrentImageIndex(currentImageIndex + 1)
+    }
+    if (isRightSwipe && currentImageIndex > 0) {
+      setCurrentImageIndex(currentImageIndex - 1)
+    }
+  }
+
+  // Auto-advance images (optional, like Car24)
+  useEffect(() => {
+    if (images.length <= 1) return
+    
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % images.length)
+    }, 4000) // Change image every 4 seconds
+
+    return () => clearInterval(interval)
+  }, [images.length])
+
   return (
     <>
-      <div className="truck-card-apple">
-        {/* Image Section */}
-        <div className="truck-card-image-apple">
-          {truck.image && truck.image !== '' ? (
-            <Image
-              src={truck.image}
-              alt={truck.name}
-              fill
-              style={{ objectFit: 'cover' }}
-              className="truck-card-img"
-            />
+      <div
+        className="truck-card-apple"
+        onClick={handleViewDetails}
+        role="button"
+        tabIndex={0}
+      >
+        {/* Image Section with Carousel - Car24 Style */}
+        <div 
+          className="truck-card-image-apple"
+          ref={imageContainerRef}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          {images.length > 0 ? (
+            <div 
+              className="truck-card-image-carousel"
+              style={{ transform: `translateX(-${currentImageIndex * 100}%)` }}
+            >
+              {images.map((img, index) => (
+                <div
+                  key={index}
+                  className="truck-card-image-slide"
+                >
+                  <Image
+                    src={img}
+                    alt={`${truck.name} - Image ${index + 1}`}
+                    fill
+                    style={{ objectFit: 'cover' }}
+                    className="truck-card-img"
+                    priority={index === 0}
+                  />
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="truck-card-image-placeholder">
               <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -50,13 +128,41 @@ export default function TruckCard({ truck }: TruckCardProps) {
               </svg>
             </div>
           )}
+          
+          {/* Image Counter - Car24 Style */}
+          {images.length > 1 && (
+            <div className="truck-card-image-counter">
+              {currentImageIndex + 1} / {images.length}
+            </div>
+          )}
+
+          {/* Image Indicators/Dots - Car24 Style */}
+          {images.length > 1 && (
+            <div className="truck-card-image-indicators">
+              {images.map((_, index) => (
+                <button
+                  key={index}
+                  className={`truck-card-indicator ${index === currentImageIndex ? 'active' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setCurrentImageIndex(index)
+                  }}
+                  aria-label={`Go to image ${index + 1}`}
+                />
+              ))}
+            </div>
+          )}
+
           <div className="truck-card-overlay">
             {truck.certified && (
               <span className="truck-badge-certified-apple">✓ Certified</span>
             )}
             <button 
               className="truck-favorite-btn"
-              onClick={() => setIsFavorite(!isFavorite)}
+              onClick={(e) => {
+                e.stopPropagation()
+                setIsFavorite(!isFavorite)
+              }}
               aria-label="Add to favorites"
             >
               <svg 
@@ -79,6 +185,11 @@ export default function TruckCard({ truck }: TruckCardProps) {
 
         {/* Content Section */}
         <div className="truck-card-content-apple">
+          {/* Badges - Spinny style */}
+          <div className="truck-card-badges">
+            {truck.certified && <span className="badge-pill badge-green">Certified</span>}
+          </div>
+
           {/* Specs */}
           <div className="truck-card-specs-apple">
             <div className="truck-spec-apple">
@@ -97,6 +208,25 @@ export default function TruckCard({ truck }: TruckCardProps) {
             </div>
           </div>
 
+          {/* EMI Row */}
+          <div className="truck-card-emi-row">
+            <div className="truck-emi-text">
+              <span className="truck-emi-label">EMI starts at</span>
+              <span className="truck-emi-value">
+                {emiValue ? `₹${emiValue.toLocaleString('en-IN')}/mo` : 'Check EMI'}
+              </span>
+            </div>
+            <button
+              className="truck-emi-cta"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleViewDetails()
+              }}
+            >
+              View Plan
+            </button>
+          </div>
+
           {/* Location */}
           <div className="truck-card-location">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -109,12 +239,26 @@ export default function TruckCard({ truck }: TruckCardProps) {
           {/* Footer */}
           <div className="truck-card-footer-apple">
             <div className="truck-card-price-apple">{truck.price}</div>
-            <button 
-              className="truck-card-cta-apple" 
-              onClick={handleViewDetails}
-            >
-              View Details →
-            </button>
+            <div className="truck-card-cta-group">
+              <button 
+                className="truck-card-cta-apple" 
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleViewDetails()
+                }}
+              >
+                View Details →
+              </button>
+              <button 
+                className="truck-card-cta-secondary"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleViewDetails()
+                }}
+              >
+                Book Test Drive
+              </button>
+            </div>
           </div>
         </div>
       </div>

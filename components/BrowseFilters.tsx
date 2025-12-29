@@ -5,9 +5,10 @@ import { useState, useEffect, useCallback } from 'react'
 interface BrowseFiltersProps {
   onFilterChange: (filters: any) => void
   totalCars: number
+  onClose?: () => void
 }
 
-export default function BrowseFilters({ onFilterChange, totalCars }: BrowseFiltersProps) {
+export default function BrowseFilters({ onFilterChange, totalCars, onClose }: BrowseFiltersProps) {
   const [isPriceRangeOpen, setIsPriceRangeOpen] = useState(true)
   const [isBrandOpen, setIsBrandOpen] = useState(false)
   const [isYearOpen, setIsYearOpen] = useState(false)
@@ -105,6 +106,15 @@ export default function BrowseFilters({ onFilterChange, totalCars }: BrowseFilte
   return (
     <div className="browse-filters">
       {/* Price Range */}
+      <div className="filter-section filter-section-header-row">
+        <div className="filter-section-title">Filters</div>
+        {onClose && (
+          <button className="filter-close-btn" onClick={onClose} aria-label="Close filters">
+            Done
+          </button>
+        )}
+      </div>
+
       <div className="filter-section">
         <button 
           className="filter-section-header"

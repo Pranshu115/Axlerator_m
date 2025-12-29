@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import TruckCard from '@/components/TruckCard'
 import BrowseFilters from '@/components/BrowseFilters'
@@ -22,13 +23,23 @@ interface Truck {
   features?: string[]
   color?: string
   owner?: string
+  images?: string[]
+  manufacturer?: string
+  model?: string
 }
 
 function BrowseTrucksContent() {
   const searchParams = useSearchParams()
+  const [mounted, setMounted] = useState(false)
   const [trucks, setTrucks] = useState<Truck[]>([])
   const [filteredTrucks, setFilteredTrucks] = useState<Truck[]>([])
-  const [loading, setLoading] = useState(true)
+  // Initialize loading as false to ensure server and client render the same initial state
+  const [loading, setLoading] = useState(false)
+  const hasInitialFetch = useRef(false)
+  const [showMobileFilters, setShowMobileFilters] = useState(false)
+  const [sortBy, setSortBy] = useState('newest') // newest, price-low, price-high, year-new, year-old, km-low, km-high
+  const [showSortMenu, setShowSortMenu] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const [filters, setFilters] = useState({
     priceMin: 50000,
     priceMax: 7000000,
@@ -45,6 +56,18 @@ function BrowseTrucksContent() {
     selectedRTOLocation: '',
     searchQuery: ''
   })
+
+  // Ensure component is mounted on client before rendering dynamic content
+  useEffect(() => {
+    setMounted(true)
+    // Set loading to true and fetch data after mount (only once)
+    if (!hasInitialFetch.current) {
+      setLoading(true)
+      fetchTrucks()
+      hasInitialFetch.current = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const fetchTrucks = useCallback(async () => {
     try {
@@ -93,6 +116,14 @@ function BrowseTrucksContent() {
           }
         }
         
+        // Generate multiple images for gallery (Car24 style)
+        const generateImages = (baseImage: string) => {
+          if (!baseImage) return []
+          // For now, use the same image multiple times (can be enhanced with actual multiple images)
+          // In production, this would come from truck.images array
+          return [baseImage, baseImage, baseImage] // Simulate 3 images
+        }
+        
         return {
         id: truck.id,
         name: `${truck.year} ${truck.manufacturer} ${truck.model}`,
@@ -103,11 +134,14 @@ function BrowseTrucksContent() {
         transmission: 'Manual', // Default, can be enhanced with transmission field
         location: truck.location || truck.city || 'Unknown',
         image: truck.imageUrl,
+        images: generateImages(truck.imageUrl), // Add images array for carousel
         certified: truck.certified ?? true,
           availability: 'In stock',
           features: features,
           color: truck.color || undefined,
-          owner: truck.ownerNumber ? `${truck.ownerNumber}${truck.ownerNumber === 1 ? 'st' : truck.ownerNumber === 2 ? 'nd' : truck.ownerNumber === 3 ? 'rd' : 'th'} Owner` : undefined
+          owner: truck.ownerNumber ? `${truck.ownerNumber}${truck.ownerNumber === 1 ? 'st' : truck.ownerNumber === 2 ? 'nd' : truck.ownerNumber === 3 ? 'rd' : 'th'} Owner` : undefined,
+          manufacturer: truck.manufacturer,
+          model: truck.model
         }
       })
       
@@ -138,6 +172,23 @@ function BrowseTrucksContent() {
         const ownerNumber = sub.ownerNumber || 1
         const ownerText = `${ownerNumber}${ownerNumber === 1 ? 'st' : ownerNumber === 2 ? 'nd' : ownerNumber === 3 ? 'rd' : 'th'} Owner`
         
+        // Generate multiple images for gallery (Car24 style)
+        const generateImages = (baseImage: string) => {
+          if (!baseImage) return []
+          // Use actual images array if available, otherwise simulate
+          if (sub.images) {
+            try {
+              const parsedImages = typeof sub.images === 'string' ? JSON.parse(sub.images) : sub.images
+              if (Array.isArray(parsedImages) && parsedImages.length > 0) {
+                return parsedImages
+              }
+            } catch (e) {
+              // Fall through to default
+            }
+          }
+          return [baseImage, baseImage, baseImage] // Simulate 3 images
+        }
+        
         return {
           id: sub.id + 10000, // Offset ID to avoid conflicts
           name: `${sub.year} ${sub.manufacturer} ${sub.model}`,
@@ -148,11 +199,14 @@ function BrowseTrucksContent() {
           transmission: sub.transmission || 'Manual',
           location: `${sub.city || 'Unknown'}, ${sub.state || 'Unknown'}`,
           image: imageUrl,
+          images: generateImages(imageUrl), // Add images array for carousel
           certified: sub.certified ?? false,
           availability: sub.negotiable ? 'Negotiable' : 'Fixed Price',
           features: features,
           color: sub.color || undefined,
-          owner: ownerText
+          owner: ownerText,
+          manufacturer: sub.manufacturer,
+          model: sub.model
         }
       })
       
@@ -183,9 +237,25 @@ function BrowseTrucksContent() {
       const query = filters.searchQuery.toLowerCase().trim()
       filtered = filtered.filter(truck => {
         const truckName = truck.name.toLowerCase()
-        // Also check manufacturer and model if available
-        const manufacturer = truck.name.split(' ').slice(1).join(' ').toLowerCase() // Extract manufacturer from name
-        return truckName.includes(query) || manufacturer.includes(query)
+        const manufacturer = (truck.manufacturer || '').toLowerCase()
+        const model = (truck.model || '').toLowerCase()
+        
+        // Check if query matches:
+        // 1. Full truck name
+        // 2. Manufacturer name
+        // 3. Model name (partial match)
+        // 4. Model code/number (e.g., "1512 LPT" should match "Tata 1512 LPT")
+        const matchesName = truckName.includes(query)
+        const matchesManufacturer = manufacturer.includes(query) || query.includes(manufacturer)
+        const matchesModel = model.includes(query) || query.includes(model)
+        
+        // For model searches like "Tata 1512 LPT", extract just the model part
+        // and check if it matches the truck's model
+        const queryParts = query.split(' ')
+        const modelPart = queryParts.slice(-2).join(' ') // Last 2 words (e.g., "1512 LPT")
+        const matchesModelPart = model.includes(modelPart) || modelPart.includes(model)
+        
+        return matchesName || matchesManufacturer || matchesModel || matchesModelPart
       })
       console.log('After search filter:', filtered.length)
     }
@@ -383,6 +453,9 @@ function BrowseTrucksContent() {
   }, [filters, trucks])
 
   useEffect(() => {
+    // Only run after component is mounted on client
+    if (!mounted) return
+    
     // Read location and search from URL query parameters
     const locationParam = searchParams.get('location')
     const searchParam = searchParams.get('search')
@@ -398,8 +471,9 @@ function BrowseTrucksContent() {
       setFilters(prev => ({ ...prev, searchQuery: '' }))
     }
     
-    fetchTrucks()
-  }, [searchParams, fetchTrucks])
+    // Only fetch if searchParams changed (not on initial mount, as that's handled in mounted useEffect)
+    // This prevents duplicate fetches
+  }, [mounted, searchParams])
 
   useEffect(() => {
     applyFilters()
@@ -445,9 +519,118 @@ function BrowseTrucksContent() {
     setFilters(newFilters)
   }, [])
 
+  // Sort trucks
+  const sortedTrucks = useMemo(() => {
+    const trucks = [...filteredTrucks]
+    
+    switch (sortBy) {
+      case 'price-low':
+        return trucks.sort((a, b) => {
+          const priceA = parseInt(a.price.replace(/[^0-9]/g, '')) || 0
+          const priceB = parseInt(b.price.replace(/[^0-9]/g, '')) || 0
+          return priceA - priceB
+        })
+      case 'price-high':
+        return trucks.sort((a, b) => {
+          const priceA = parseInt(a.price.replace(/[^0-9]/g, '')) || 0
+          const priceB = parseInt(b.price.replace(/[^0-9]/g, '')) || 0
+          return priceB - priceA
+        })
+      case 'year-new':
+        return trucks.sort((a, b) => b.year - a.year)
+      case 'year-old':
+        return trucks.sort((a, b) => a.year - b.year)
+      case 'km-low':
+        return trucks.sort((a, b) => {
+          const kmA = parseInt(a.mileage.replace(/[^0-9]/g, '')) || 0
+          const kmB = parseInt(b.mileage.replace(/[^0-9]/g, '')) || 0
+          return kmA - kmB
+        })
+      case 'km-high':
+        return trucks.sort((a, b) => {
+          const kmA = parseInt(a.mileage.replace(/[^0-9]/g, '')) || 0
+          const kmB = parseInt(b.mileage.replace(/[^0-9]/g, '')) || 0
+          return kmB - kmA
+        })
+      default: // newest
+        return trucks
+    }
+  }, [filteredTrucks, sortBy])
+
+  // Quick filter chips for mobile
+  const quickFilters = [
+    { 
+      label: 'Under ₹10L', 
+      value: 'under-10l', 
+      filter: () => setFilters(prev => ({ ...prev, priceMin: 50000, priceMax: 1000000 })) 
+    },
+    { 
+      label: '₹10L - ₹20L', 
+      value: '10l-20l', 
+      filter: () => setFilters(prev => ({ ...prev, priceMin: 1000000, priceMax: 2000000 })) 
+    },
+    { 
+      label: 'Above ₹20L', 
+      value: 'above-20l', 
+      filter: () => setFilters(prev => ({ ...prev, priceMin: 2000000, priceMax: 7000000 })) 
+    },
+    { 
+      label: '2020+', 
+      value: '2020+', 
+      filter: () => setFilters(prev => ({ ...prev, selectedYear: '2020 - 2024' })) 
+    },
+    { 
+      label: 'Diesel', 
+      value: 'diesel', 
+      filter: () => setFilters(prev => ({ ...prev, selectedFuelTypes: ['Diesel'] })) 
+    },
+    { 
+      label: 'CNG', 
+      value: 'cng', 
+      filter: () => setFilters(prev => ({ ...prev, selectedFuelTypes: ['CNG'] })) 
+    },
+  ]
+
   return (
     <div className="browse-trucks-page">
       <Navbar />
+      
+      {/* Mobile Hero Search Bar - Car24 Style */}
+      <div className="mobile-hero-search">
+        <div className="mobile-search-container">
+          <input
+            type="text"
+            placeholder="Search trucks by brand, model..."
+            className="mobile-search-input"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value)
+              setFilters(prev => ({ ...prev, searchQuery: e.target.value }))
+            }}
+          />
+          <button className="mobile-search-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Quick Filter Chips - Car24 Style */}
+      <div className="mobile-quick-filters">
+        <div className="quick-filters-scroll">
+          {quickFilters.map((filter) => (
+            <button
+              key={filter.value}
+              className="quick-filter-chip"
+              onClick={filter.filter}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+      </div>
       
       <div className="browse-trucks-container">
         {/* Left Sidebar - Filters */}
@@ -455,6 +638,7 @@ function BrowseTrucksContent() {
           <BrowseFilters 
             onFilterChange={handleFilterChange}
             totalCars={filteredTrucks.length}
+            onClose={() => setShowMobileFilters(false)}
           />
         </aside>
 
@@ -463,7 +647,75 @@ function BrowseTrucksContent() {
           <div className="browse-trucks-header">
             <h1 className="browse-trucks-title">Browse All Trucks</h1>
             <div className="browse-trucks-count-wrapper">
-              <p className="browse-trucks-count">Found {filteredTrucks.length} trucks</p>
+              <p className="browse-trucks-count">Found {sortedTrucks.length} trucks</p>
+              <div className="mobile-header-actions">
+                <button 
+                  className="mobile-sort-btn"
+                  onClick={() => setShowSortMenu(!showSortMenu)}
+                  aria-label="Sort trucks"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M3 6h18M7 12h10M11 18h2" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                  Sort
+                </button>
+                <button 
+                  className="mobile-filter-toggle"
+                  onClick={() => setShowMobileFilters(true)}
+                  aria-label="Open filters"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" strokeWidth="2"/>
+                  </svg>
+                  Filters
+                </button>
+              </div>
+              {showSortMenu && (
+                <div className="mobile-sort-menu">
+                  <button 
+                    className={sortBy === 'newest' ? 'active' : ''}
+                    onClick={() => { setSortBy('newest'); setShowSortMenu(false); }}
+                  >
+                    Newest First
+                  </button>
+                  <button 
+                    className={sortBy === 'price-low' ? 'active' : ''}
+                    onClick={() => { setSortBy('price-low'); setShowSortMenu(false); }}
+                  >
+                    Price: Low to High
+                  </button>
+                  <button 
+                    className={sortBy === 'price-high' ? 'active' : ''}
+                    onClick={() => { setSortBy('price-high'); setShowSortMenu(false); }}
+                  >
+                    Price: High to Low
+                  </button>
+                  <button 
+                    className={sortBy === 'year-new' ? 'active' : ''}
+                    onClick={() => { setSortBy('year-new'); setShowSortMenu(false); }}
+                  >
+                    Year: Newest
+                  </button>
+                  <button 
+                    className={sortBy === 'year-old' ? 'active' : ''}
+                    onClick={() => { setSortBy('year-old'); setShowSortMenu(false); }}
+                  >
+                    Year: Oldest
+                  </button>
+                  <button 
+                    className={sortBy === 'km-low' ? 'active' : ''}
+                    onClick={() => { setSortBy('km-low'); setShowSortMenu(false); }}
+                  >
+                    KM: Low to High
+                  </button>
+                  <button 
+                    className={sortBy === 'km-high' ? 'active' : ''}
+                    onClick={() => { setSortBy('km-high'); setShowSortMenu(false); }}
+                  >
+                    KM: High to Low
+                  </button>
+                </div>
+              )}
               {isAnyFilterApplied() && (
                 <button 
                   onClick={() => {
@@ -484,9 +736,11 @@ function BrowseTrucksContent() {
                       searchQuery: ''
                     })
                     // Clear search from URL
+                    if (typeof window !== 'undefined') {
                     const url = new URL(window.location.href)
                     url.searchParams.delete('search')
                     window.history.replaceState({}, '', url.pathname + url.search)
+                    }
                   }}
                   className="clear-all-main-btn"
                 >
@@ -523,9 +777,11 @@ function BrowseTrucksContent() {
                     searchQuery: ''
                   })
                   // Clear search from URL
+                  if (typeof window !== 'undefined') {
                   const url = new URL(window.location.href)
                   url.searchParams.delete('search')
                   window.history.replaceState({}, '', url.pathname + url.search)
+                  }
                 }}
                 className="reset-filters-btn"
               >
@@ -534,13 +790,72 @@ function BrowseTrucksContent() {
             </div>
           ) : (
             <div className="browse-trucks-grid">
-              {filteredTrucks.map((truck) => (
+              {sortedTrucks.map((truck) => (
                 <TruckCard key={truck.id} truck={truck} />
               ))}
             </div>
           )}
         </main>
       </div>
+      
+      {/* Mobile Filters Drawer */}
+      <div className={`mobile-filters-drawer ${showMobileFilters ? 'open' : ''}`}>
+        <div className="mobile-filters-header">
+          <h3>Filters</h3>
+          <button onClick={() => setShowMobileFilters(false)} aria-label="Close filters">✕</button>
+        </div>
+        <div className="mobile-filters-body">
+          <BrowseFilters 
+            onFilterChange={handleFilterChange}
+            totalCars={filteredTrucks.length}
+            onClose={() => setShowMobileFilters(false)}
+          />
+        </div>
+      </div>
+
+      {showMobileFilters && <div className="mobile-filters-backdrop" onClick={() => setShowMobileFilters(false)} />}
+      {showSortMenu && <div className="mobile-sort-backdrop" onClick={() => setShowSortMenu(false)} />}
+
+      {/* Floating Action Button - Car24 Style */}
+      <Link href="/sell-truck" className="mobile-fab">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>Sell Truck</span>
+      </Link>
+
+      {/* Bottom Navigation Bar - Car24 Style */}
+      <nav className="mobile-bottom-nav">
+        <Link href="/" className="bottom-nav-item">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+          <span>Home</span>
+        </Link>
+        <Link href="/browse-trucks" className="bottom-nav-item active">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          <span>Buy</span>
+        </Link>
+        <Link href="/sell-truck" className="bottom-nav-item">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Sell</span>
+        </Link>
+        <Link href="/services" className="bottom-nav-item">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span>Profile</span>
+        </Link>
+      </nav>
       
       <Footer />
     </div>

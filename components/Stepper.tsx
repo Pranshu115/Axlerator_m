@@ -58,6 +58,33 @@ const Stepper = forwardRef<StepperRef, StepperProps>(({
   const totalSteps = stepsArray.length
   const isCompleted = currentStep > totalSteps
   const isLastStep = currentStep === totalSteps
+  const stepperHeaderRef = useRef<HTMLDivElement>(null)
+
+  const scrollToActiveStep = (step: number) => {
+    if (stepperHeaderRef.current) {
+      const container = stepperHeaderRef.current
+      const stepElement = container.querySelector(
+        `[data-step-number="${step}"]`
+      ) as HTMLElement
+      
+      if (stepElement) {
+        const containerRect = container.getBoundingClientRect()
+        const elementRect = stepElement.getBoundingClientRect()
+        const scrollLeft = container.scrollLeft
+        const elementLeft = elementRect.left - containerRect.left + scrollLeft
+        const elementWidth = elementRect.width
+        const containerWidth = containerRect.width
+        const elementCenter = elementLeft + elementWidth / 2
+        const scrollTarget = elementCenter - containerWidth / 2
+        const maxScroll = container.scrollWidth - containerWidth
+
+        container.scrollTo({
+          left: Math.max(0, Math.min(maxScroll, scrollTarget)),
+          behavior: 'smooth'
+        })
+      }
+    }
+  }
 
   const updateStep = (newStep: number) => {
     setCurrentStep(newStep)
@@ -65,8 +92,17 @@ const Stepper = forwardRef<StepperRef, StepperProps>(({
       onFinalStepCompleted()
     } else {
       onStepChange(newStep)
+      // Scroll to active step after state update
+      setTimeout(() => scrollToActiveStep(newStep), 100)
     }
   }
+
+  // Scroll to active step when it changes
+  useLayoutEffect(() => {
+    if (currentStep && !isCompleted) {
+      setTimeout(() => scrollToActiveStep(currentStep), 150)
+    }
+  }, [currentStep, isCompleted])
 
   const handleBack = () => {
     if (currentStep > 1) {
@@ -109,31 +145,38 @@ const Stepper = forwardRef<StepperRef, StepperProps>(({
       <div
         className={`stepper-container ${stepCircleContainerClassName}`}
       >
-        <div className={`stepper-header ${stepContainerClassName}`}>
+        <div 
+          ref={stepperHeaderRef}
+          className={`stepper-header ${stepContainerClassName}`}
+        >
           {stepsArray.map((_, index) => {
             const stepNumber = index + 1
             const isNotLastStep = index < totalSteps - 1
             return (
               <React.Fragment key={stepNumber}>
                 {renderStepIndicator ? (
-                  renderStepIndicator({
-                    step: stepNumber,
-                    currentStep,
-                    onStepClick: clicked => {
-                      setDirection(clicked > currentStep ? 1 : -1)
-                      updateStep(clicked)
-                    }
-                  })
+                  <div data-step-number={stepNumber}>
+                    {renderStepIndicator({
+                      step: stepNumber,
+                      currentStep,
+                      onStepClick: clicked => {
+                        setDirection(clicked > currentStep ? 1 : -1)
+                        updateStep(clicked)
+                      }
+                    })}
+                  </div>
                 ) : (
-                  <StepIndicator
-                    step={stepNumber}
-                    disableStepIndicators={disableStepIndicators}
-                    currentStep={currentStep}
-                    onClickStep={clicked => {
-                      setDirection(clicked > currentStep ? 1 : -1)
-                      updateStep(clicked)
-                    }}
-                  />
+                  <div data-step-number={stepNumber}>
+                    <StepIndicator
+                      step={stepNumber}
+                      disableStepIndicators={disableStepIndicators}
+                      currentStep={currentStep}
+                      onClickStep={clicked => {
+                        setDirection(clicked > currentStep ? 1 : -1)
+                        updateStep(clicked)
+                      }}
+                    />
+                  </div>
                 )}
                 {isNotLastStep && <StepConnector isComplete={currentStep > stepNumber} />}
               </React.Fragment>
@@ -355,3 +398,4 @@ function CheckIcon(props: CheckIconProps) {
     </svg>
   )
 }
+

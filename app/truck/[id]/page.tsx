@@ -228,6 +228,54 @@ export default function TruckDetailsPage() {
   const getGalleryImages = () => {
     if (!truck?.imageUrl) return []
     
+    // Special handling for HR 38 W 2162 - use all uploaded images from Supabase
+    if (truck.imageUrl?.includes('HR-38-W-2162') || truck.imageUrl?.includes('HR 38 W 2162')) {
+      return [
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296192768-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.33.50%20PM.jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296194243-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.33.51%20PM%20(1).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296194521-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.33.51%20PM%20(2).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296194886-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.33.51%20PM.jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296195169-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.33.52%20PM%20(1).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296195438-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.33.52%20PM.jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296195668-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.33.54%20PM.jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296195940-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.33.55%20PM.jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296196167-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.06%20PM%20(1).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296196423-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.06%20PM.jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296196752-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.13%20PM%20(1).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296196973-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.13%20PM%20(2).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296197184-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.13%20PM.jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296197398-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.14%20PM%20(1).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296197678-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.14%20PM.jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296197936-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.15%20PM%20(1).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296198299-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.15%20PM%20(2).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296198595-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.15%20PM.jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296199403-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.25%20PM.jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296199663-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.26%20PM.jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296199906-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.36%20PM%20(1).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296200251-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.36%20PM.jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296200505-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.37%20PM.jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296200762-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.38%20PM%20(1).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296201036-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.38%20PM%20(2).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296201362-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.38%20PM%20(3).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296201814-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.38%20PM.jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296202143-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.39%20PM%20(1).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296202376-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.39%20PM%20(2).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296202585-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.39%20PM%20(3).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296202851-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.39%20PM.jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296203223-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.40%20PM%20(1).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296203556-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.40%20PM%20(2).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296203838-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.40%20PM.jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296204188-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.41%20PM%20(1).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296204497-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.41%20PM%20(2).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296204775-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.41%20PM%20(3).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296205042-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.41%20PM.jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296205381-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.42%20PM%20(1).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296205684-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.42%20PM%20(2).jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296205985-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.42%20PM.jpeg",
+        "https://ccmlkidiwxmqxzexoeji.supabase.co/storage/v1/object/public/truck-images/1766296206254-HR-38-W-2162-WhatsApp%20Image%202025-12-17%20at%206.34.43%20PM.jpeg"
+      ]
+    }
+    
     // Special handling for Eicher PRO 2110 - use all 4 images
     if (truck.manufacturer === 'Eicher Motors' && truck.model?.includes('PRO 2110')) {
       return [
@@ -732,7 +780,7 @@ export default function TruckDetailsPage() {
               src={gallery[selectedImageIndex] || '/placeholder.jpg'}
               alt={truck.name}
               fill
-              style={{ objectFit: 'cover' }}
+              style={{ objectFit: 'contain', objectPosition: 'left center' }}
               unoptimized
               priority
             />
@@ -877,12 +925,6 @@ export default function TruckDetailsPage() {
                 <path d="M20 6L9 17l-5-5"/>
               </svg>
               <span>RC transfer included</span>
-            </div>
-            <div className="td-trust-item">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5">
-                <path d="M20 6L9 17l-5-5"/>
-              </svg>
-              <span>7-day return policy</span>
             </div>
           </div>
 
