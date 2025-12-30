@@ -232,11 +232,9 @@ div[class*="nprogress"],
     transition: opacity 0.3s ease;
   }
   .hero-section {
-    height: auto;
-    min-height: 70vh;
-    padding: 0 1.25rem 2rem;
+    height: 70vh;
+    padding: 0 1.25rem;
     align-items: flex-end;
-    overflow: visible;
   }
   .hero-title {
     font-size: 2rem;
@@ -244,30 +242,6 @@ div[class*="nprogress"],
   }
   .hero-subtitle {
     font-size: 1rem;
-  }
-  .hero-content {
-    padding-bottom: 2rem;
-  }
-  .hero-search-card {
-    margin-top: 1.25rem;
-    margin-bottom: 1rem;
-    padding-bottom: 1.25rem;
-  }
-  .hero-search-link {
-    display: inline-flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    margin-top: 0.5rem;
-    padding: 0.5rem 0;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #2563eb !important;
-    text-decoration: none;
-    width: 100%;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    z-index: 10;
   }
 
 /* Hero search card (TruckJunction / Spinny style) */
@@ -278,6 +252,7 @@ div[class*="nprogress"],
   padding: 1rem 0.9rem 1.1rem;
   box-shadow: 0 8px 30px rgba(15, 23, 42, 0.18);
   border: 1px solid rgba(148, 163, 184, 0.2);
+  margin-bottom: 1.5rem;
 }
 
 .hero-search-tabs {
@@ -364,6 +339,8 @@ div[class*="nprogress"],
   font-weight: 600;
   color: #2563eb;
   text-decoration: none;
+  padding: 0.5rem 0;
+  margin-bottom: 0.5rem;
 }
   .browse-trucks-container {
     flex-direction: column;
@@ -922,17 +899,8 @@ div[class*="nprogress"],
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    135deg, 
-    rgba(100, 100, 100, 0.3) 0%, 
-    rgba(120, 120, 120, 0.25) 25%,
-    rgba(100, 100, 100, 0.2) 50%,
-    rgba(120, 120, 120, 0.25) 75%,
-    rgba(100, 100, 100, 0.3) 100%
-  );
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.35) 100%);
   z-index: 1;
-  backdrop-filter: blur(0px);
-  -webkit-backdrop-filter: blur(0px);
 }
 
 .hero-content {
@@ -941,7 +909,6 @@ div[class*="nprogress"],
   color: #fff;
   max-width: 900px;
   padding: 2rem;
-  width: 100%;
 }
 
 .hero-title {
@@ -10933,11 +10900,22 @@ body:has(.contact-page) .search-icon,
 
   /* Hero Section Mobile */
   .hero-section {
-    height: auto;
-    min-height: 70vh;
+    height: 70vh;
+    min-height: 500px;
     padding-top: 60px;
-    padding-bottom: 2rem;
-    overflow: visible;
+    padding-bottom: 80px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .hero-search-card {
+    padding-bottom: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .hero-search-link {
+    margin-bottom: 0.75rem;
+    padding: 0.75rem 0;
   }
 
   .hero-title {
@@ -10952,31 +10930,6 @@ body:has(.contact-page) .search-icon,
     padding: 0 1rem;
     margin-bottom: 1.5rem;
     line-height: 1.5;
-  }
-
-  .hero-search-card {
-    margin-bottom: 1rem;
-    padding-bottom: 1.25rem;
-  }
-
-  .hero-content {
-    padding-bottom: 2rem;
-  }
-  .hero-search-link {
-    display: inline-flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    margin-top: 0.5rem;
-    padding: 0.5rem 0;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #2563eb !important;
-    text-decoration: none;
-    width: 100%;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    z-index: 10;
   }
 
   .hero-buttons {
@@ -11540,10 +11493,21 @@ body:has(.contact-page) .search-icon,
 @media screen and (max-width: 480px) {
   /* Extra Small Mobile */
   .hero-section {
-    height: auto;
-    min-height: 65vh;
-    padding-bottom: 2rem;
-    overflow: visible;
+    height: 65vh;
+    min-height: 450px;
+    padding-bottom: 80px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .hero-search-card {
+    padding-bottom: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .hero-search-link {
+    margin-bottom: 0.75rem;
+    padding: 0.75rem 0;
   }
 
   .hero-title {
@@ -11552,26 +11516,6 @@ body:has(.contact-page) .search-icon,
 
   .hero-subtitle {
     font-size: 0.95rem !important;
-  }
-
-  .hero-content {
-    padding-bottom: 2rem;
-  }
-  .hero-search-link {
-    display: inline-flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    margin-top: 0.5rem;
-    padding: 0.5rem 0;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #2563eb !important;
-    text-decoration: none;
-    width: 100%;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    z-index: 10;
   }
 
   .truck-card-image-apple {
