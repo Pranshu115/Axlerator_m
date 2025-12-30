@@ -152,7 +152,10 @@ export default function TruckDetailsPage() {
             if (imagesRes.ok) {
               const imagesData = await imagesRes.json()
               if (imagesData.images && imagesData.images.length > 0) {
-                setTruckImages(imagesData.images)
+                // Remove duplicate URLs
+                const uniqueImages = Array.from(new Set(imagesData.images.filter((url: string) => url)))
+                console.log(`Loaded ${uniqueImages.length} unique images for truck ${params.id} (from ${imagesData.images.length} total)`)
+                setTruckImages(uniqueImages.length > 0 ? uniqueImages : (data.imageUrl ? [data.imageUrl] : []))
               } else {
                 // Fallback to single image
                 setTruckImages(data.imageUrl ? [data.imageUrl] : [])
@@ -850,17 +853,17 @@ export default function TruckDetailsPage() {
               )}
               {gallery.length <= visibleThumbCount && (
                 <div className="td-image-dots-wrapper">
-                  {gallery.map((_, idx) => (
-                    <button 
-                      key={idx}
-                      className={`td-dot ${idx === selectedImageIndex ? 'active' : ''}`}
-                      onClick={() => setSelectedImageIndex(idx)}
+              {gallery.map((_, idx) => (
+                <button 
+                  key={idx}
+                  className={`td-dot ${idx === selectedImageIndex ? 'active' : ''}`}
+                  onClick={() => setSelectedImageIndex(idx)}
                       aria-label={`Go to image ${idx + 1}`}
-                    />
-                  ))}
-                </div>
-              )}
+                />
+              ))}
             </div>
+              )}
+          </div>
           </div>
           <div className="td-thumbs-container">
             {gallery.length > visibleThumbCount && (

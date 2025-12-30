@@ -84,14 +84,21 @@ async function fetchImagesFromSupabaseStorage(
       return []
     }
 
+    // Normalize folder name for multiple pattern matching
+    const folderNameUpper = folderName.toUpperCase()
+    const folderNameHyphen = folderNameUpper.replace(/\s+/g, '-')
+    const folderNameNoSpace = folderNameUpper.replace(/\s+/g, '')
+    const folderNameSpace = folderNameUpper.replace(/-/g, ' ')
+    
     // Filter files that contain the folder name pattern
     const matchingFiles = files
       .filter((file: any) => {
         const fileName = file.name.toUpperCase()
-        // Check if filename contains the folder pattern
-        return fileName.includes(searchPattern) || 
-               fileName.includes(folderName.replace(/\s+/g, '-').toUpperCase()) ||
-               fileName.includes(folderName.replace(/\s+/g, '').toUpperCase())
+        // Check multiple patterns to match folder name
+        return fileName.includes(folderNameHyphen) || 
+               fileName.includes(folderNameNoSpace) ||
+               fileName.includes(folderNameSpace) ||
+               fileName.includes(searchPattern)
       })
       .map((file: any) => {
         // Get public URL for each file
@@ -102,7 +109,12 @@ async function fetchImagesFromSupabaseStorage(
       })
       .filter((url: string) => url) // Remove any null/undefined URLs
 
-    return matchingFiles
+    // Remove duplicate URLs
+    const uniqueUrls = Array.from(new Set(matchingFiles))
+    
+    console.log(`Found ${uniqueUrls.length} unique images for folder: ${folderName} (from ${matchingFiles.length} total matches)`)
+    
+    return uniqueUrls
   } catch (error) {
     console.error('Error fetching images from Supabase Storage:', error)
     return []
@@ -162,8 +174,10 @@ export async function GET(
           .filter((url: string) => url) // Remove any null/undefined URLs
 
         if (folderImages.length > 0) {
-          console.log(`Found ${folderImages.length} images from mapping file for folder: ${folderName}`)
-          return NextResponse.json({ images: folderImages })
+          // Remove duplicate URLs
+          const uniqueFolderImages = Array.from(new Set(folderImages))
+          console.log(`Found ${uniqueFolderImages.length} unique images from mapping file for folder: ${folderName} (from ${folderImages.length} total)`)
+          return NextResponse.json({ images: uniqueFolderImages })
         }
       }
 
@@ -177,9 +191,10 @@ export async function GET(
       }
     }
 
-    // Fallback: return single image
-    console.log(`No folder match found, returning single image for truck ${truckId}`)
-    return NextResponse.json({ images: truck.image_url ? [truck.image_url] : [] })
+    // Fallback: return single image (ensure it's not duplicated)
+    const fallbackImage = truck.image_url ? [truck.image_url] : []
+    console.log(`No folder match found for truck ${truckId} (name: "${truck.name}"), returning single image: ${fallbackImage.length > 0 ? 'yes' : 'no'}`)
+    return NextResponse.json({ images: fallbackImage })
   } catch (error) {
     console.error('Error fetching truck images:', error)
     return NextResponse.json({ images: [] })
