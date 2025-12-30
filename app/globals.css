@@ -232,9 +232,11 @@ div[class*="nprogress"],
     transition: opacity 0.3s ease;
   }
   .hero-section {
-    height: 70vh;
-    padding: 0 1.25rem;
+    height: auto;
+    min-height: 70vh;
+    padding: 0 1.25rem 2rem;
     align-items: flex-end;
+    overflow: visible;
   }
   .hero-title {
     font-size: 2rem;
@@ -242,6 +244,30 @@ div[class*="nprogress"],
   }
   .hero-subtitle {
     font-size: 1rem;
+  }
+  .hero-content {
+    padding-bottom: 2rem;
+  }
+  .hero-search-card {
+    margin-top: 1.25rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1.25rem;
+  }
+  .hero-search-link {
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #2563eb !important;
+    text-decoration: none;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    z-index: 10;
   }
 
 /* Hero search card (TruckJunction / Spinny style) */
@@ -906,6 +932,7 @@ div[class*="nprogress"],
   color: #fff;
   max-width: 900px;
   padding: 2rem;
+  width: 100%;
 }
 
 .hero-title {
@@ -10897,9 +10924,11 @@ body:has(.contact-page) .search-icon,
 
   /* Hero Section Mobile */
   .hero-section {
-    height: 70vh;
-    min-height: 500px;
+    height: auto;
+    min-height: 70vh;
     padding-top: 60px;
+    padding-bottom: 2rem;
+    overflow: visible;
   }
 
   .hero-title {
@@ -10914,6 +10943,31 @@ body:has(.contact-page) .search-icon,
     padding: 0 1rem;
     margin-bottom: 1.5rem;
     line-height: 1.5;
+  }
+
+  .hero-search-card {
+    margin-bottom: 1rem;
+    padding-bottom: 1.25rem;
+  }
+
+  .hero-content {
+    padding-bottom: 2rem;
+  }
+  .hero-search-link {
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #2563eb !important;
+    text-decoration: none;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    z-index: 10;
   }
 
   .hero-buttons {
@@ -11477,8 +11531,10 @@ body:has(.contact-page) .search-icon,
 @media screen and (max-width: 480px) {
   /* Extra Small Mobile */
   .hero-section {
-    height: 65vh;
-    min-height: 450px;
+    height: auto;
+    min-height: 65vh;
+    padding-bottom: 2rem;
+    overflow: visible;
   }
 
   .hero-title {
@@ -11487,6 +11543,26 @@ body:has(.contact-page) .search-icon,
 
   .hero-subtitle {
     font-size: 0.95rem !important;
+  }
+
+  .hero-content {
+    padding-bottom: 2rem;
+  }
+  .hero-search-link {
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #2563eb !important;
+    text-decoration: none;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    z-index: 10;
   }
 
   .truck-card-image-apple {
