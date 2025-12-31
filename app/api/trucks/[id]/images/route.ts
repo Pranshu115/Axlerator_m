@@ -99,15 +99,24 @@ async function fetchImagesFromSupabaseStorage(
     const folderNameNoSpace = folderNameUpper.replace(/\s+/g, '')
     const folderNameSpace = folderNameUpper.replace(/-/g, ' ')
     
+    console.log(`[Storage] Searching for patterns: "${folderNameHyphen}", "${folderNameNoSpace}", "${folderNameSpace}", "${searchPattern}"`)
+    console.log(`[Storage] Total files in bucket: ${files.length}`)
+    
     // Filter files that contain the folder name pattern
     const matchingFiles = files
       .filter((file: any) => {
         const fileName = file.name.toUpperCase()
         // Check multiple patterns to match folder name
-        return fileName.includes(folderNameHyphen) || 
+        const matches = fileName.includes(folderNameHyphen) || 
                fileName.includes(folderNameNoSpace) ||
                fileName.includes(folderNameSpace) ||
                fileName.includes(searchPattern)
+        
+        if (matches) {
+          console.log(`[Storage] ✅ Match found: ${file.name}`)
+        }
+        
+        return matches
       })
       .map((file: any) => {
         // Get public URL for each file
@@ -209,8 +218,23 @@ export async function GET(
     console.log(`[Images API] Extracted folder name: "${folderName}" from truck name: "${truck.name}", image_url: "${truck.image_url || 'N/A'}"`)
     
     if (folderName) {
-      // First, try to get images from mapping file (if available)
-      console.log(`[Images API] Attempting to read mapping file...`)
+      // Strategy 1: Try Supabase Storage first (most reliable in production)
+      console.log(`[Images API] Strategy 1: Fetching from Supabase Storage for folder: ${folderName}`)
+      const storageImages = await fetchImagesFromSupabaseStorage(supabase, folderName)
+      
+      if (storageImages.length > 0) {
+        console.log(`[Images API] ✅ Found ${storageImages.length} images from Supabase Storage for folder: ${folderName}`)
+        return NextResponse.json({ images: storageImages })
+      } else {
+        console.log(`[Images API] ⚠️ No images found in Supabase Storage, trying mapping file...`)
+      }
+
+      // Strategy 2: Try mapping file as fallback
+      console.log(`[Images API] Strategy 2: Attempting to read mapping file...`)
+      const mappingPath = path.join(process.cwd(), 'hr-folders-upload-mapping.json')
+      console.log(`[Images API] Mapping file path: ${mappingPath}`)
+      console.log(`[Images API] Mapping file exists: ${fs.existsSync(mappingPath)}`)
+      
       const mapping = getHRFolderImages()
       console.log(`[Images API] Mapping file read: ${mapping ? mapping.length + ' entries' : 'not found or empty'}`)
       
@@ -255,17 +279,6 @@ export async function GET(
         }
       } else {
         console.log(`[Images API] ⚠️ Mapping file not available or empty`)
-      }
-
-      // If mapping file doesn't have images, fetch directly from Supabase Storage
-      console.log(`[Images API] Fetching from Supabase Storage for folder: ${folderName}`)
-      const storageImages = await fetchImagesFromSupabaseStorage(supabase, folderName)
-      
-      if (storageImages.length > 0) {
-        console.log(`[Images API] ✅ Found ${storageImages.length} images from Supabase Storage for folder: ${folderName}`)
-        return NextResponse.json({ images: storageImages })
-      } else {
-        console.log(`[Images API] ⚠️ No images found in Supabase Storage for folder: ${folderName}`)
       }
     } else {
       console.log(`[Images API] ⚠️ Could not extract folder name from truck name: "${truck.name}"`)
